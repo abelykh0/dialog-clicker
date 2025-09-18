@@ -91,11 +91,12 @@ function getNextParams(baselineUnits: number[], index: number, dialogParams: str
 
 async function doDialog(dialogParams: string[]): Promise<boolean> {
     const CONFIG = {
-      buttonId: "s_3_1_12_0_Ctrl" // button "Mass Change"
+      buttonMassChangeMpg: "s_3_1_12_0_Ctrl", // button "Mass Change" on MPG Baseline
+      buttonMassChangeUpc: "s_4_1_10_0_Ctrl" // button "Mass Change" on Product Baseline
     };
 
     // Click the button to open the dialog
-    const button = document.getElementById(CONFIG.buttonId);
+    const button = document.getElementById(CONFIG.buttonMassChangeMpg);
     if (button) button.click();
 
     // Wait a bit for dialog to appear

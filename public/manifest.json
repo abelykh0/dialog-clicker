@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Dialog Clicker",
+  "name": "Sales Volume Planning Helper",
   "version": "1.0",
   "permissions": ["scripting", "activeTab", "notifications"],
   "host_permissions": ["<all_urls>"],
@@ -9,8 +9,8 @@
   },
   "action": {
     "default_icon": { 
-      "16": "icons/icon-16.ico"
+      "16": "icons/icon-16.png"
     },
-    "default_title": "Click to run Dialog Clicker"
+    "default_title": "Sales Volume Planning Helper for THOR"
   }
 }
