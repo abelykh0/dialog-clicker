@@ -60,24 +60,40 @@ function showSingleRowPasteDialog(): Promise<string[] | null> {
     });
 }
 
-(function () {
-  const CONFIG = {
-    buttonId: "s_3_1_12_0_Ctrl",            // button "Mass Change"
-  };
+// returns next index
+function getNextParams(baselineUnits: number[], index: number, dialogParams: string[]): number {
+  // Skip first
+  if (index === 0) {
+    index++;
+  }
 
-  // Main dialog automation
-  (async function run() {
-    const text = await showSingleRowPasteDialog();
-    console.log(text);
-    if (!text) {
-      return;
-    }
+  const startWeek = index + 1;
+  let endWeek = startWeek;
 
-    const fieldValues: string[] = [...text];
-    if (fieldValues.length < 3) {
-      return;
-    }
-    
+  while (index < 51 && baselineUnits[index] === baselineUnits[index + 1]) {
+    index++;
+    endWeek++;
+  }
+
+  // Skip 52
+  if (endWeek === 52) {
+    endWeek = 51;
+  }
+
+  const currentValue = baselineUnits[index];
+  dialogParams[0] = currentValue.toString();
+  dialogParams[1] = "2026" + startWeek.toString().padStart(2, '0');
+  dialogParams[2] = "2026" + endWeek.toString().padStart(2, '0');
+
+  index++;
+  return index;
+}
+
+async function doDialog(dialogParams: string[]): Promise<boolean> {
+    const CONFIG = {
+      buttonId: "s_3_1_12_0_Ctrl" // button "Mass Change"
+    };
+
     // Click the button to open the dialog
     const button = document.getElementById(CONFIG.buttonId);
     if (button) button.click();
@@ -92,15 +108,15 @@ function showSingleRowPasteDialog(): Promise<string[] | null> {
     }) as HTMLElement;
 
     if (!container) { 
-      return;
+      return false;
     }
 
     // Fill all input fields in order
     const inputs = Array.from(container.querySelectorAll<HTMLInputElement>("input")).slice(2);
     inputs.forEach((input, index) => {
-      if (index < fieldValues.length) {
+      if (index < dialogParams.length) {
         input.focus();
-        input.value = fieldValues[index];
+        input.value = dialogParams[index];
         input.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
       }
     });
@@ -109,8 +125,40 @@ function showSingleRowPasteDialog(): Promise<string[] | null> {
     const okButton = container.querySelector<HTMLButtonElement>(
       'button[data-display="Execute"]'
     );
-    if (okButton) okButton.click();
-    waitForClosePopup(container);
-    console.log("✅ Siebel popup closed (ClosePopup detected)");
+    if (!okButton) {
+      return false;
+    }
+      
+    okButton.click();
+    await waitForClosePopup(container);
+    return true;
+}
+
+(function () {
+  // Main dialog automation
+  (async function run() {
+    const values = await showSingleRowPasteDialog();
+    console.log(values);
+    if (!values) {
+      return;
+    }
+
+    if (values.length < 52) {
+      window.alert("Wrong input!");
+      return;
+    }
+
+    const baselineUnits: number[] = [];
+    values.forEach(element => {
+      baselineUnits.push(+element);
+    });
+
+    const dialogParams: string[] = ["", "", ""];
+
+    let index = 0;
+    while (index < 51) {
+      index = getNextParams(baselineUnits, index, dialogParams);
+      await doDialog(dialogParams);
+    }
   })();
 })();

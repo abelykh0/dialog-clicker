@@ -8,6 +8,9 @@
     "service_worker": "background.js"
   },
   "action": {
+    "default_icon": { 
+      "16": "icons/icon-16.ico"
+    },
     "default_title": "Click to run Dialog Clicker"
   }
 }
