@@ -150,7 +150,7 @@ async function doDialog(dialogParams: string[]): Promise<boolean> {
 
     const baselineUnits: number[] = [];
     values.forEach(element => {
-      baselineUnits.push(+element);
+      baselineUnits.push(+element.replace(",", ""));
     });
 
     const dialogParams: string[] = ["", "", ""];
