@@ -1,0 +1,16 @@
+{
+    "name": "auto-dialog-clicker",
+    "version": "1.0.0",
+    "devDependencies": {
+        "@types/chrome": "^0.0.209",
+        "archiver": "^7.0.1",
+        "cross-zip": "^4.0.1",
+        "typescript": "^5.6.0"
+    },
+    "scripts": {
+        "build": "node ./scripts/build.js",
+        "zip": "node ./scripts/zip.js",
+        "watch": "node ./node_modules/.bin/tsc --watch",
+        "setup": "npm install && npm run build"
+    }
+}

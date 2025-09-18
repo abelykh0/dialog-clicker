@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Dialog Clicker",
+  "version": "1.0",
+  "permissions": ["scripting", "activeTab", "notifications"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Click to run Dialog Clicker"
+  }
+}
