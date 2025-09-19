@@ -3,6 +3,12 @@ function waitForClosePopup(popupContainer: HTMLElement): Promise<void> {
         const observer = new MutationObserver(() => {
             if (!document.body.contains(popupContainer) || popupContainer.style.display === "none") {
                 observer.disconnect();
+
+                // Wait a bit before resolving
+                setTimeout(() => {
+                    resolve();
+                }, 500);
+
                 resolve();
             }
         });
@@ -10,7 +16,7 @@ function waitForClosePopup(popupContainer: HTMLElement): Promise<void> {
     });
 }
 
-function showSingleRowPasteDialog(): Promise<string[] | null> {
+function showSingleRowPasteDialog(): Promise<{ level: string; text: string } | null> {
     return new Promise(resolve => {
         const overlay = document.createElement('div');
         overlay.style.cssText = `
@@ -27,11 +33,30 @@ function showSingleRowPasteDialog(): Promise<string[] | null> {
         `;
 
         dialog.innerHTML = `
-            <p>Paste values from Excel (single row):</p>
-            <textarea id="pasteInput" style="width:100%; height:200px; font-size:16px;"></textarea>
-            <div style="margin-top:10px;">
-                <button id="pasteOkBtn">OK</button>
-                <button id="pasteCancelBtn">Cancel</button>
+            <label><input type="radio" name="level" value="MPG" checked> MPG Level</label>
+            <label style="margin-left:15px;"><input type="radio" name="level" value="UPC"> UPC Level</label>
+            <p style="margin-top:15px;">Paste values from Excel (single row):</p>
+            <textarea id="pasteInput" style="width:100%; height:150px; font-size:16px;"></textarea>
+            <div style="margin-top:15px;">
+            <button id="okBtn" style="
+                background-color:#007bff;
+                color:white;
+                border:none;
+                border-radius:4px;
+                padding:6px 14px;
+                margin-right:8px;
+                cursor:pointer;
+                font-size:14px;
+            ">OK</button>
+            <button id="cancelBtn" style="
+                background-color:#f0f0f0;
+                color:#333;
+                border:1px solid #ccc;
+                border-radius:4px;
+                padding:6px 14px;
+                cursor:pointer;
+                font-size:14px;
+            ">Cancel</button>
             </div>
         `;
 
@@ -39,15 +64,21 @@ function showSingleRowPasteDialog(): Promise<string[] | null> {
         document.body.appendChild(overlay);
 
         const input = dialog.querySelector<HTMLTextAreaElement>('#pasteInput')!;
-        const okBtn = dialog.querySelector<HTMLButtonElement>('#pasteOkBtn')!;
-        const cancelBtn = dialog.querySelector<HTMLButtonElement>('#pasteCancelBtn')!;
+        const okBtn = dialog.querySelector<HTMLButtonElement>('#okBtn')!;
+        const cancelBtn = dialog.querySelector<HTMLButtonElement>('#cancelBtn')!;
 
         okBtn.addEventListener('click', () => {
             const text = input.value.trim();
-            if (!text) return;
-            // Split by tabs and trim each value
-            const values = text.split('\t').map(v => v.trim());
-            resolve(values);
+            if (!text) {
+                resolve(null);
+            } else {
+                const radios = dialog.querySelectorAll<HTMLInputElement>('input[name="level"]');
+                let selected = "MPG";
+                radios.forEach(r => {
+                  if (r.checked) selected = r.value;
+                });
+                resolve({ level: selected, text });
+            }
             document.body.removeChild(overlay);
         });
 
@@ -89,14 +120,21 @@ function getNextParams(baselineUnits: number[], index: number, dialogParams: str
   return index;
 }
 
-async function doDialog(dialogParams: string[]): Promise<boolean> {
+async function doDialog(level: string, dialogParams: string[]): Promise<boolean> {
     const CONFIG = {
       buttonMassChangeMpg: "s_3_1_12_0_Ctrl", // button "Mass Change" on MPG Baseline
-      buttonMassChangeUpc: "s_4_1_10_0_Ctrl" // button "Mass Change" on Product Baseline
+      buttonMassChangeUpc: "s_4_1_10_0_Ctrl"  // button "Mass Change" on Product Baseline
     };
 
     // Click the button to open the dialog
-    const button = document.getElementById(CONFIG.buttonMassChangeMpg);
+    let button;
+    if (level === "UPC") {
+      button = document.getElementById(CONFIG.buttonMassChangeUpc);
+    }
+    else {
+      button = document.getElementById(CONFIG.buttonMassChangeMpg);
+    }
+    
     if (button) button.click();
 
     // Wait a bit for dialog to appear
@@ -138,12 +176,12 @@ async function doDialog(dialogParams: string[]): Promise<boolean> {
 (function () {
   // Main dialog automation
   (async function run() {
-    const values = await showSingleRowPasteDialog();
-    console.log(values);
-    if (!values) {
+    const result = await showSingleRowPasteDialog();
+    if (!result) {
       return;
     }
 
+    const values = result.text.split('\t').map(s => s.trim());
     if (values.length < 52) {
       window.alert("Wrong input!");
       return;
@@ -159,7 +197,11 @@ async function doDialog(dialogParams: string[]): Promise<boolean> {
     let index = 0;
     while (index < 51) {
       index = getNextParams(baselineUnits, index, dialogParams);
-      await doDialog(dialogParams);
+      const dialogResult = await doDialog(result.level, dialogParams);
+      if (!dialogResult) {
+        window.alert("Failed");
+        break;
+      }
     }
   })();
 })();
