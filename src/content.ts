@@ -7,9 +7,7 @@ function waitForClosePopup(popupContainer: HTMLElement): Promise<void> {
                 // Wait a bit before resolving
                 setTimeout(() => {
                     resolve();
-                }, 500);
-
-                resolve();
+                }, 200);
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
@@ -137,15 +135,22 @@ async function doDialog(level: string, dialogParams: string[]): Promise<boolean>
     
     if (button) button.click();
 
-    // Wait a bit for dialog to appear
-    await new Promise((r) => setTimeout(r, 500));
-
     // Find the container
-    const container = Array.from(document.querySelectorAll('div[role="dialog"]')).find(dialog => {
-        const style = window.getComputedStyle(dialog);
-        return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-    }) as HTMLElement;
+    let container;
+    for (let i = 0; i < 3; i++) {
+      container = Array.from(document.querySelectorAll('div[role="dialog"]')).find(dialog => {
+          const style = window.getComputedStyle(dialog);
+          return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+      }) as HTMLElement;
 
+      // Wait a bit for dialog to appear
+      await new Promise((r) => setTimeout(r, 200));
+
+      if (container) { 
+        break;
+      }
+    }
+    
     if (!container) { 
       return false;
     }
