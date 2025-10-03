@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Sales Volume Planning Helper",
   "version": "1.0",
-  "permissions": ["scripting", "activeTab", "notifications"],
+  "permissions": ["scripting", "activeTab", "notifications","storage"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"

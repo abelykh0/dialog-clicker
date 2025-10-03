@@ -16,8 +16,23 @@ function waitForClosePopup(popupContainer: HTMLElement): Promise<void> {
     });
 }
 
+// Load saved settings
+async function loadSettings(): Promise<{ year: string }> {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(["dialogSettings"], (res) => {
+            resolve(res.dialogSettings || { year: "2026" });
+        });
+    });
+}
+
+// Save settings
+function saveSettings(settings: { year: string }) {
+    chrome.storage.local.set({ dialogSettings: settings });
+}
+
 function showSingleRowPasteDialog(): Promise<{ level: string; text: string } | null> {
-    return new Promise(resolve => {
+    return new Promise(async (resolve) => {
+        const saved = await loadSettings();
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; top:0; left:0; width:100%; height:100%;
@@ -34,7 +49,17 @@ function showSingleRowPasteDialog(): Promise<{ level: string; text: string } | n
 
         dialog.innerHTML = `
             <label><input type="radio" name="level" value="MPG" checked> MPG Level</label>
+
             <label style="margin-left:15px;"><input type="radio" name="level" value="UPC"> UPC Level</label>
+            
+            <div style="margin-bottom:15px;">
+              <label for="yearSelect">Year:</label>
+              <select id="yearSelect" style="margin-left:8px; padding:3px 6px;">
+                <option value="2025" ${saved.year === "2025" ? "selected" : ""}>2025</option>
+                <option value="2026" ${saved.year === "2026" ? "selected" : ""}>2026</option>
+              </select>
+            </div>
+
             <p style="margin-top:15px;">Paste values from Excel (single row):</p>
             <textarea id="pasteInput" style="width:100%; height:150px; font-size:16px;"></textarea>
             <div style="margin-top:15px;">
@@ -63,6 +88,7 @@ function showSingleRowPasteDialog(): Promise<{ level: string; text: string } | n
         overlay.appendChild(dialog);
         document.body.appendChild(overlay);
 
+        const yearSelect = dialog.querySelector<HTMLSelectElement>("#yearSelect")!;
         const input = dialog.querySelector<HTMLTextAreaElement>('#pasteInput')!;
         const okBtn = dialog.querySelector<HTMLButtonElement>('#okBtn')!;
         const cancelBtn = dialog.querySelector<HTMLButtonElement>('#cancelBtn')!;
@@ -77,6 +103,11 @@ function showSingleRowPasteDialog(): Promise<{ level: string; text: string } | n
                 radios.forEach(r => {
                   if (r.checked) selected = r.value;
                 });
+
+                // Save settings
+                const settings = { year: yearSelect.value };
+                saveSettings(settings);
+
                 resolve({ level: selected, text });
             }
             document.body.removeChild(overlay);
@@ -197,6 +228,10 @@ async function doDialog(level: string, dialogParams: string[]): Promise<boolean>
     let index = 0;
     while (index < 51) {
       index = getNextParams(baselineUnits, index, dialogParams);
+      if (dialogParams[0] === "NaN") {
+        continue;
+      }
+
       const dialogResult = await doDialog(result.level, dialogParams);
       if (!dialogResult) {
         window.alert("Failed");
