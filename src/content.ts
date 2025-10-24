@@ -28,7 +28,7 @@ function saveSettings(settings: { year: string }) {
     chrome.storage.local.set({ dialogSettings: settings });
 }
 
-function showSingleRowPasteDialog(): Promise<{ level: string; text: string } | null> {
+function showSingleRowPasteDialog(): Promise<{ level: string; text: string; year: string } | null> {
     return new Promise(async (resolve) => {
         const saved = await loadSettings();
         const overlay = document.createElement('div');
@@ -106,7 +106,7 @@ function showSingleRowPasteDialog(): Promise<{ level: string; text: string } | n
                 const settings = { year: yearSelect.value };
                 saveSettings(settings);
 
-                resolve({ level: selected, text });
+                resolve({ level: selected, text, year: yearSelect.value });
             }
             document.body.removeChild(overlay);
         });
@@ -121,7 +121,7 @@ function showSingleRowPasteDialog(): Promise<{ level: string; text: string } | n
 }
 
 // returns next index
-function getNextParams(baselineUnits: number[], index: number, dialogParams: string[]): number {
+function getNextParams(baselineUnits: number[], index: number, year: string, dialogParams: string[]): number {
   // Skip first
   if (index === 0) {
     index++;
@@ -142,8 +142,8 @@ function getNextParams(baselineUnits: number[], index: number, dialogParams: str
 
   const currentValue = baselineUnits[index];
   dialogParams[0] = currentValue.toString();
-  dialogParams[1] = "2026" + startWeek.toString().padStart(2, '0');
-  dialogParams[2] = "2026" + endWeek.toString().padStart(2, '0');
+  dialogParams[1] = year + startWeek.toString().padStart(2, '0');
+  dialogParams[2] = year + endWeek.toString().padStart(2, '0');
 
   index++;
   return index;
@@ -232,7 +232,7 @@ async function doDialog(level: string, dialogParams: string[]): Promise<boolean>
 
     let index = 0;
     while (index < 51) {
-      index = getNextParams(baselineUnits, index, dialogParams);
+      index = getNextParams(baselineUnits, index, result.year, dialogParams);
       if (dialogParams[0] === "NaN") {
         continue;
       }
