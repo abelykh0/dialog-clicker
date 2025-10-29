@@ -168,7 +168,7 @@ async function doDialog(level: string, dialogParams: string[]): Promise<boolean>
 
     // Find the container
     let container;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 10; i++) {
       container = Array.from(document.querySelectorAll('div[role="dialog"]')).find(dialog => {
           const style = window.getComputedStyle(dialog);
           return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
