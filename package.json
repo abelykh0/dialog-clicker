@@ -4,7 +4,6 @@
     "devDependencies": {
         "@types/chrome": "0.1.12",
         "archiver": "7.0.1",
-        "cross-zip": "4.0.1",
         "typescript": "5.9.2"
     },
     "scripts": {

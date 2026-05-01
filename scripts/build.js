@@ -29,6 +29,16 @@ try {
   const outDir = path.join(__dirname, "..", "dist");
   copyRecursive(srcDir, outDir);
 
+  console.log("Inlining dialog.html into content.js...");
+  const dialogHtml = fs.readFileSync(path.join(outDir, "dialog.html"), "utf8");
+  const contentJsPath = path.join(outDir, "content.js");
+  const contentJs = fs.readFileSync(contentJsPath, "utf8");
+  const inlined = contentJs.replace(
+    `fetch(chrome.runtime.getURL('dialog.html')).then(r => r.text())`,
+    `Promise.resolve(${JSON.stringify(dialogHtml)})`
+  );
+  fs.writeFileSync(contentJsPath, inlined);
+
   console.log("✅ Build completed successfully!");
 } catch (err) {
   console.error("❌ Build failed:", err);

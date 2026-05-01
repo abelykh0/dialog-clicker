@@ -1,13 +1,23 @@
 function waitForClosePopup(popupContainer: HTMLElement): Promise<void> {
-    return new Promise((resolve) => {
-        const observer = new MutationObserver(() => {
-            if (!document.body.contains(popupContainer) || popupContainer.style.display === "none") {
-                observer.disconnect();
+    return new Promise((resolve, reject) => {
+        const isClosed = () =>
+            !document.body.contains(popupContainer) || popupContainer.style.display === "none";
 
-                // Wait a bit before resolving
-                setTimeout(() => {
-                    resolve();
-                }, 200);
+        if (isClosed()) {
+            setTimeout(resolve, 200);
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            observer.disconnect();
+            reject(new Error("Dialog did not close"));
+        }, 30_000);
+
+        const observer = new MutationObserver(() => {
+            if (isClosed()) {
+                observer.disconnect();
+                clearTimeout(timeout);
+                setTimeout(resolve, 200);
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
@@ -18,7 +28,7 @@ function waitForClosePopup(popupContainer: HTMLElement): Promise<void> {
 async function loadSettings(): Promise<{ year: string }> {
     return new Promise((resolve) => {
         chrome.storage.local.get(["dialogSettings"], (res) => {
-            resolve(res.dialogSettings || { year: "2026" });
+            resolve(res.dialogSettings || { year: String(new Date().getFullYear()) });
         });
     });
 }
@@ -45,48 +55,22 @@ function showSingleRowPasteDialog(): Promise<{ level: string; text: string; year
             max-width:600px; width:90%;
         `;
 
-        dialog.innerHTML = `
-            <label><input type="radio" name="level" value="MPG" checked> MPG Level</label>
-
-            <label style="margin-left:15px;"><input type="radio" name="level" value="UPC"> UPC Level</label>
-            
-            <div style="margin-bottom:15px;">
-              <label for="yearSelect">Year:</label>
-              <select id="yearSelect" style="margin-left:8px; padding:3px 6px;">
-                <option value="2025" ${saved.year === "2025" ? "selected" : ""}>2025</option>
-                <option value="2026" ${saved.year === "2026" ? "selected" : ""}>2026</option>
-              </select>
-            </div>
-
-            <p style="margin-top:15px;">Paste values from Excel (single row):</p>
-            <textarea id="pasteInput" style="width:100%; height:150px; font-size:16px;"></textarea>
-            <div style="margin-top:15px;">
-            <button id="okBtn" style="
-                background-color:#007bff;
-                color:white;
-                border:none;
-                border-radius:4px;
-                padding:6px 14px;
-                margin-right:8px;
-                cursor:pointer;
-                font-size:14px;
-            ">OK</button>
-            <button id="cancelBtn" style="
-                background-color:#f0f0f0;
-                color:#333;
-                border:1px solid #ccc;
-                border-radius:4px;
-                padding:6px 14px;
-                cursor:pointer;
-                font-size:14px;
-            ">Cancel</button>
-            </div>
-        `;
+        dialog.innerHTML = await fetch(chrome.runtime.getURL('dialog.html')).then(r => r.text());
 
         overlay.appendChild(dialog);
         document.body.appendChild(overlay);
 
         const yearSelect = dialog.querySelector<HTMLSelectElement>("#yearSelect")!;
+        const currentYear = new Date().getFullYear();
+        const years = [currentYear - 1, currentYear, currentYear + 1];
+        years.forEach(y => {
+            const opt = document.createElement('option');
+            opt.value = String(y);
+            opt.textContent = String(y);
+            yearSelect.appendChild(opt);
+        });
+        yearSelect.value = years.includes(Number(saved.year)) ? saved.year : String(currentYear);
+
         const input = dialog.querySelector<HTMLTextAreaElement>('#pasteInput')!;
         const okBtn = dialog.querySelector<HTMLButtonElement>('#okBtn')!;
         const cancelBtn = dialog.querySelector<HTMLButtonElement>('#cancelBtn')!;
@@ -210,7 +194,9 @@ async function doDialog(level: string, dialogParams: string[]): Promise<boolean>
 }
 
 (function () {
-  // Main dialog automation
+  if ((window as any).__dialogClickerActive) return;
+  (window as any).__dialogClickerActive = true;
+
   (async function run() {
     const result = await showSingleRowPasteDialog();
     if (!result) {
@@ -225,7 +211,7 @@ async function doDialog(level: string, dialogParams: string[]): Promise<boolean>
 
     const baselineUnits: number[] = [];
     values.forEach(element => {
-      baselineUnits.push(+element.replace(",", ""));
+      baselineUnits.push(+element.replace(/,/g, ""));
     });
 
     const dialogParams: string[] = ["", "", ""];
@@ -243,5 +229,7 @@ async function doDialog(level: string, dialogParams: string[]): Promise<boolean>
         break;
       }
     }
-  })();
+  })().finally(() => {
+    (window as any).__dialogClickerActive = false;
+  });
 })();
